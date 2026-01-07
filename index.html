@@ -10,54 +10,45 @@
         * { box-sizing: border-box; outline: none; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #000; color: var(--text); height: 100vh; overflow: hidden; }
 
-        /* DASHBOARD (Visible par défaut) */
         #dashboard { display: flex; height: 100vh; width: 100vw; }
         
-        /* GAUCHE : FORMULAIRE */
+        /* SIDEBAR */
         .sidebar { width: 450px; background: var(--bg-panel); border-right: 1px solid #333; display: flex; flex-direction: column; height: 100%; }
         .sidebar-header { padding: 20px; border-bottom: 1px solid #333; text-align: center; }
-        .sidebar-logo { width: 80px; mix-blend-mode: screen; }
+        .sidebar-logo { width: 100px; max-height: 100px; object-fit: contain; mix-blend-mode: screen; display: block; margin: 0 auto; }
+        .btn-change-logo { color: #888; font-size: 11px; margin-top: 10px; cursor: pointer; text-decoration: underline; }
         .controls { flex: 1; overflow-y: auto; padding: 20px; }
         
-        /* DROITE : PREVIEW */
+        /* PREVIEW */
         .preview-area { flex: 1; background: #333; display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 40px; }
         
-        /* FORMULAIRE UI */
+        /* FORMULAIRE */
         .group { margin-bottom: 15px; }
         label { display: block; font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
         input, select, textarea { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 4px; font-size: 14px; }
         
-        /* Boutons Switch */
         .type-switcher { display: flex; gap: 10px; margin-bottom: 20px; }
         .btn-type { flex: 1; padding: 10px; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; opacity: 0.5; }
         .btn-type.active { opacity: 1; }
         .btn-gold { background: var(--gold); color: black; }
         .btn-red { background: #D32F2F; color: white; }
 
-        /* Lignes Articles */
         .item-row { background: #252525; padding: 10px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #333; display: flex; gap: 5px; align-items: center; }
         .btn-add { width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: white; cursor: pointer; margin-top: 5px; }
         .btn-trash { background: #422; color: #f88; border: none; width: 30px; height: 30px; cursor: pointer; border-radius: 4px; }
         
-        /* Bouton Télécharger */
         .download-zone { padding: 20px; border-top: 1px solid #333; background: #111; }
         .btn-download { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; font-size: 16px; font-weight: bold; text-transform: uppercase; cursor: pointer; border-radius: 5px; }
         .btn-download:hover { background: #2ecc71; }
 
-        /* --- LA FEUILLE A4 --- */
+        /* PAPIER A4 */
         #paper { 
-            background: white; 
-            width: 794px; /* Largeur exacte A4 px */
-            height: 1123px; /* Hauteur exacte A4 px */
-            padding: 0; 
-            box-shadow: 0 0 30px rgba(0,0,0,0.5); 
-            color: black; font-family: Arial, sans-serif;
-            /* Zoom visuel pour l'écran SEULEMENT */
-            transform: scale(0.75); transform-origin: top center;
-            overflow: hidden; 
+            background: white; width: 794px; height: 1123px; padding: 0; 
+            box-shadow: 0 0 30px rgba(0,0,0,0.5); color: black; font-family: Arial, sans-serif;
+            transform: scale(0.75); transform-origin: top center; overflow: hidden; 
         }
 
-        /* CONTENU PDF */
+        /* PDF INTERNE */
         .pdf-page { padding: 40px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
         .pdf-header { display: flex; justify-content: space-between; margin-bottom: 40px; }
         .pdf-logo { width: 200px; display: block; margin-bottom: 15px; }
@@ -82,8 +73,8 @@
         
         <div class="sidebar">
             <div class="sidebar-header">
-                <img src="logo.png" class="sidebar-logo">
-                <div style="font-size:12px; color:#666; margin-top:5px; cursor:pointer" onclick="document.getElementById('logo-uploader').click()">CHANGER LOGO</div>
+                <img src="logo.png" class="sidebar-logo" id="sidebar-logo-img" alt="LOGO ICI" onerror="this.style.display='none'">
+                <div class="btn-change-logo" onclick="document.getElementById('logo-uploader').click()">CLIQUEZ ICI POUR CHANGER LE LOGO</div>
             </div>
             
             <div class="controls">
@@ -133,13 +124,15 @@
 
     <script>
         const USER = { name: "Sabri BENNACEUR EI", address: "2 Résidence des Rosiers, 92800 Puteaux, FR", email: "serruremse@gmail.com", siret: "943032755", iban: "FR76 1695 8000 0159 6810 0824 765", rc: "RC décennale TETRIS police n° SV75018041T37384" };
+        
+        // Initialisation de l'état avec logo par défaut
         let state = { type: 'FACTURE', logo: 'logo.png', items: [{desc: '', qty: 1, price: 0}] };
 
-        // Init Dates
+        // Dates par défaut
         document.getElementById('inp-date').valueAsDate = new Date();
         const d = new Date(); d.setDate(d.getDate()+30); document.getElementById('inp-date-fin').valueAsDate = d;
 
-        // Init App
+        // Lancement initial
         renderItems(); render();
 
         function setType(t) { 
@@ -150,7 +143,24 @@
             render(); 
         }
         
-        function updateLogo(input) { if (input.files && input.files[0]) { const reader = new FileReader(); reader.onload = function(e) { state.logo = e.target.result; render(); }; reader.readAsDataURL(input.files[0]); } }
+        // --- FONCTION DE MISE A JOUR DU LOGO CORRIGÉE ---
+        function updateLogo(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // 1. Mise à jour de la variable d'état
+                    state.logo = e.target.result;
+                    // 2. Mise à jour immédiate du petit logo en haut à gauche
+                    const sidebarLogo = document.getElementById('sidebar-logo-img');
+                    sidebarLogo.src = state.logo;
+                    sidebarLogo.style.display = 'block';
+                    // 3. Mise à jour de la feuille A4
+                    render();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
         function addItem() { state.items.push({desc: '', qty: 1, price: 0}); renderItems(); render(); }
         function removeItem(i) { state.items.splice(i, 1); renderItems(); render(); }
         function updateItem(i, f, v) { state.items[i][f] = v; render(); }
@@ -177,9 +187,11 @@
             <div class="pdf-page">
                 <div>
                     <div class="pdf-header">
-                        <div><img src="${state.logo}" class="pdf-logo">
-                        <div style="font-size:12px"><strong>${USER.name}</strong><br>${USER.address}<br>SIRET: ${USER.siret}<br>${USER.rc}</div></div>
-                        <div class="pdf-client"><strong style="color:#D32F2F">FACTURER À :</strong><br><strong style="font-size:16px">${client}</strong><br>${document.getElementById('inp-addr').value.replace(/\n/g,'<br>')}</div>
+                        <div>
+                            <img src="${state.logo}" class="pdf-logo">
+                            <div style="font-size:12px"><strong>${USER.name}</strong><br>${USER.address}<br>SIRET: ${USER.siret}</div>
+                        </div>
+                        <div class="pdf-client"><strong>FACTURER À :</strong><br><strong style="font-size:16px">${client}</strong><br>${document.getElementById('inp-addr').value.replace(/\n/g,'<br>')}</div>
                     </div>
                     <div class="pdf-title-box">
                         <div><div class="pdf-title">${state.type} N° ${num}</div><div style="font-weight:bold; margin-top:5px; color:#D32F2F">Objet: ${document.getElementById('inp-obj').value}</div></div>
@@ -200,11 +212,8 @@
         }
 
         function downloadPDF() {
-            // TECHNIQUE DU CLONE POUR IMPRESSION PARFAITE
             const original = document.getElementById('paper');
             const clone = original.cloneNode(true);
-            
-            // Paramètres du clone pour être parfait en PDF
             clone.style.transform = 'none';
             clone.style.boxShadow = 'none';
             clone.style.margin = '0';
@@ -212,8 +221,6 @@
             clone.style.height = '1123px';
             clone.style.maxHeight = '1123px';
             clone.style.overflow = 'hidden';
-            
-            // Cacher le clone
             clone.style.position = 'fixed'; clone.style.left = '-10000px'; clone.style.top = '0';
             document.body.appendChild(clone);
 
@@ -231,338 +238,4 @@
         }
     </script>
 </body>
-</html>        
-        /* BOUTONS TYPE */
-        .type-switcher { display: flex; gap: 10px; margin-bottom: 20px; }
-        .btn-type { flex: 1; padding: 12px; border: none; font-weight: bold; cursor: pointer; opacity: 0.5; border-radius: 4px; }
-        .btn-type.active { opacity: 1; }
-        .btn-gold { background: var(--gold); color: black; }
-        .btn-red { background: var(--red); color: white; }
-
-        /* LIGNES ARTICLES */
-        .item-row { background: #252525; padding: 10px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #333; display: flex; gap: 5px; align-items: center; }
-        .btn-add { width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: white; cursor: pointer; margin-top: 5px; }
-        .btn-trash { background: #422; color: #f88; border: none; width: 30px; height: 30px; cursor: pointer; border-radius: 4px; }
-
-        /* BOUTON TELECHARGER */
-        .download-zone { padding: 20px; border-top: 1px solid #333; background: #111; }
-        .btn-download { 
-            width: 100%; padding: 15px; background: #27ae60; color: white; border: none; 
-            font-size: 16px; font-weight: bold; text-transform: uppercase; cursor: pointer; border-radius: 5px; 
-        }
-        .btn-download:hover { background: #2ecc71; }
-
-        /* --- LA FEUILLE A4 (PIXEL PERFECT) --- */
-        #paper { 
-            background: white; width: 210mm; min-height: 297mm; 
-            padding: 0; box-shadow: 0 0 30px rgba(0,0,0,0.5); 
-            color: black; font-family: Arial, sans-serif;
-            /* Zoom léger pour voir la page entière sur un écran 1080p */
-            transform: scale(0.85); transform-origin: top center;
-        }
-
-        /* STYLES INTERNES PDF */
-        .pdf-page { padding: 40px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
-        .top-section { flex: 1; }
-        
-        .pdf-header { display: flex; justify-content: space-between; margin-bottom: 40px; }
-        .pdf-logo { width: 200px; display: block; margin-bottom: 15px; }
-        .pdf-sender { font-size: 12px; color: #333; line-height: 1.5; }
-        .pdf-client { width: 300px; background: #f4f4f4; padding: 20px; border-left: 5px solid #333; font-size: 13px; }
-        
-        .pdf-title-box { border-bottom: 3px solid #D32F2F; padding-bottom: 10px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
-        .pdf-title { font-size: 28px; font-weight: bold; text-transform: uppercase; margin: 0; }
-        
-        .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .pdf-table th { background: #000; color: white; padding: 10px; text-align: left; font-size: 12px; }
-        .pdf-table td { border-bottom: 1px solid #ddd; padding: 10px; font-size: 13px; }
-        
-        .pdf-totals { display: flex; justify-content: flex-end; }
-        .pdf-totals table { width: 250px; }
-        .pdf-totals td { text-align: right; padding: 5px; font-size: 13px; }
-        .pdf-total-final { font-size: 18px; font-weight: bold; color: #D32F2F; border-top: 2px solid #000; padding-top: 5px; }
-        
-        .pdf-footer { font-size: 10px; color: #555; border-top: 1px solid #ccc; padding-top: 10px; margin-top: 20px; }
-        .pdf-bank { background: #eee; padding: 10px; border-left: 3px solid #D32F2F; margin-top: 5px; font-family: monospace; font-size: 11px; }
-    </style>
-</head>
-<body>
-
-    <input type="file" id="logo-uploader" accept="image/*" style="display:none" onchange="updateLogo(this)">
-
-    <div id="login-screen">
-        <img src="logo.png" class="login-logo" onerror="this.style.display='none'">
-        <input type="password" id="password-input" placeholder="CODE">
-        <button class="btn-enter" onclick="checkLogin()">ACCÉDER AU BUREAU</button>
-    </div>
-
-    <div id="dashboard">
-        
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <img src="logo.png" class="sidebar-logo">
-                <div style="font-size:12px; color:#666; margin-top:5px; cursor:pointer" onclick="document.getElementById('logo-uploader').click()">CHANGER LOGO</div>
-            </div>
-
-            <div class="controls">
-                
-                <div class="type-switcher">
-                    <button class="btn-type btn-gold active" onclick="setType('FACTURE')" id="btn-facture">FACTURE</button>
-                    <button class="btn-type btn-red" onclick="setType('DEVIS')" id="btn-devis">DEVIS</button>
-                </div>
-
-                <div class="group">
-                    <label>Numéro</label>
-                    <input type="text" id="inp-num" placeholder="Ex: 2026-001" oninput="render()">
-                </div>
-                
-                <div class="group" style="display:flex; gap:10px">
-                    <div style="flex:1"><label>Date Émission</label><input type="date" id="inp-date" onchange="render()"></div>
-                    <div style="flex:1"><label id="lbl-date-fin">Échéance</label><input type="date" id="inp-date-fin" onchange="render()"></div>
-                </div>
-
-                <div class="group">
-                    <label>Objet</label>
-                    <input type="text" id="inp-obj" placeholder="Objet de la prestation" oninput="render()">
-                </div>
-
-                <div class="group" style="border-top:1px solid #333; padding-top:10px;">
-                    <label>Client</label>
-                    <input type="text" id="inp-client" placeholder="Nom ou Société" list="list-clients" oninput="render()">
-                    <textarea id="inp-addr" rows="3" placeholder="Adresse complète" style="margin-top:5px" oninput="render()"></textarea>
-                    <input type="text" id="inp-siret" placeholder="SIRET Client (Optionnel)" style="margin-top:5px" oninput="render()">
-                    <datalist id="list-clients"><option value="COMMUNE DE CRETEIL - CCAS"><option value="Particulier"></datalist>
-                </div>
-
-                <div class="group" style="border-top:1px solid #333; padding-top:10px;">
-                    <label>Prestations</label>
-                    <div id="items-list"></div>
-                    <button class="btn-add" onclick="addItem()">+ AJOUTER LIGNE</button>
-                </div>
-
-                <div class="group" style="border-top:1px solid #333; padding-top:10px;">
-                    <label>Règlement</label>
-                    <select id="inp-payment" onchange="render()">
-                        <option value="Paiement à réception">À réception</option>
-                        <option value="Paiement immédiat">Immédiat</option>
-                        <option value="Paiement à 30 jours (réception)" selected>30 Jours</option>
-                        <option value="Paiement à 60 jours">60 Jours</option>
-                    </select>
-                    <div style="display:flex; justify-content:space-between; margin-top:10px; align-items:center">
-                        <label style="margin:0">Appliquer TVA (20%)</label>
-                        <input type="checkbox" id="inp-tva" checked onchange="render()" style="width:20px;">
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="download-zone">
-                <button class="btn-download" onclick="downloadPDF()">TÉLÉCHARGER PDF</button>
-            </div>
-        </div>
-
-        <div class="preview-area">
-            <div id="paper">
-                </div>
-        </div>
-
-    </div>
-
-    <script>
-        // CONFIG UTILISATEUR
-        const USER = { 
-            name: "Sabri BENNACEUR EI", 
-            address: "2 Résidence des Rosiers, 92800 Puteaux, FR", 
-            email: "serruremse@gmail.com", 
-            siret: "943032755", 
-            iban: "FR76 1695 8000 0159 6810 0824 765",
-            rc: "RC décennale TETRIS police n° SV75018041T37384"
-        };
-
-        // ETAT GLOBAL
-        let state = {
-            type: 'FACTURE',
-            logo: 'logo.png',
-            items: [{desc: '', qty: 1, price: 0}]
-        };
-
-        // INIT
-        document.getElementById('inp-date').valueAsDate = new Date();
-        const d = new Date(); d.setDate(d.getDate()+30);
-        document.getElementById('inp-date-fin').valueAsDate = d;
-
-        function checkLogin() {
-            if(document.getElementById('password-input').value === "1984") {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'flex';
-                renderItems();
-                render();
-            } else { alert("Erreur"); }
-        }
-        document.getElementById('password-input').addEventListener('keypress', e => { if(e.key === 'Enter') checkLogin(); });
-
-        function setType(t) {
-            state.type = t;
-            document.getElementById('btn-facture').className = `btn-type btn-gold ${t==='FACTURE'?'active':''}`;
-            document.getElementById('btn-devis').className = `btn-type btn-red ${t==='DEVIS'?'active':''}`;
-            document.getElementById('lbl-date-fin').innerText = t==='FACTURE' ? 'Échéance' : 'Validité';
-            render();
-        }
-
-        function updateLogo(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) { state.logo = e.target.result; render(); };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        // GESTION DES ARTICLES
-        function addItem() {
-            state.items.push({desc: '', qty: 1, price: 0});
-            renderItems();
-            render();
-        }
-        function removeItem(idx) {
-            state.items.splice(idx, 1);
-            renderItems();
-            render();
-        }
-        function updateItem(idx, field, val) {
-            state.items[idx][field] = val;
-            render();
-        }
-
-        function renderItems() {
-            const list = document.getElementById('items-list');
-            list.innerHTML = '';
-            state.items.forEach((item, i) => {
-                const div = document.createElement('div');
-                div.className = 'item-row';
-                div.innerHTML = `
-                    <div style="flex:3"><input type="text" placeholder="Description" value="${item.desc}" oninput="updateItem(${i}, 'desc', this.value)"></div>
-                    <div style="flex:1"><input type="number" placeholder="Qté" value="${item.qty}" oninput="updateItem(${i}, 'qty', this.value)"></div>
-                    <div style="flex:1"><input type="number" placeholder="Prix" value="${item.price}" oninput="updateItem(${i}, 'price', this.value)"></div>
-                    <button class="btn-trash" onclick="removeItem(${i})">X</button>
-                `;
-                list.appendChild(div);
-            });
-        }
-
-        // RENDU EN TEMPS REEL DE LA FEUILLE A4
-        function render() {
-            // Récupération des valeurs
-            const num = document.getElementById('inp-num').value || 'BROUILLON';
-            const date = new Date(document.getElementById('inp-date').value).toLocaleDateString('fr-FR');
-            const dateFin = new Date(document.getElementById('inp-date-fin').value).toLocaleDateString('fr-FR');
-            const obj = document.getElementById('inp-obj').value;
-            const client = document.getElementById('inp-client').value || 'CLIENT';
-            const addr = document.getElementById('inp-addr').value.replace(/\n/g, '<br>');
-            const siretCli = document.getElementById('inp-siret').value;
-            const tvaOn = document.getElementById('inp-tva').checked;
-            const payment = document.getElementById('inp-payment').value;
-
-            // Calculs
-            let totalHT = 0;
-            let rowsHTML = state.items.map(i => {
-                const tot = i.qty * i.price;
-                totalHT += tot;
-                return `<tr><td>${i.desc}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right">${Number(i.price).toFixed(2)} €</td><td style="text-align:right">${tot.toFixed(2)} €</td></tr>`;
-            }).join('');
-
-            const mtTVA = tvaOn ? totalHT * 0.2 : 0;
-            const ttc = totalHT + mtTVA;
-            const color = state.type === 'FACTURE' ? '#D32F2F' : '#D32F2F'; // On garde rouge pour les deux docs papiers comme demandé
-
-            // Injection HTML
-            const html = `
-            <div class="pdf-page">
-                <div class="top-section">
-                    <div class="pdf-header">
-                        <div>
-                            <img src="${state.logo}" class="pdf-logo">
-                            <div class="pdf-sender">
-                                <strong>${USER.name}</strong><br>
-                                ${USER.address}<br>
-                                Email : ${USER.email}<br>
-                                SIRET : ${USER.siret}<br>
-                                ${USER.rc}
-                            </div>
-                        </div>
-                        <div class="pdf-client">
-                            <strong style="color:${color}; text-transform:uppercase">Facturer à :</strong><br><br>
-                            <strong style="font-size:16px">${client}</strong><br>
-                            ${addr}
-                            ${siretCli ? `<br>SIRET : ${siretCli}` : ''}
-                        </div>
-                    </div>
-
-                    <div class="pdf-title-box" style="border-color:${color}">
-                        <div>
-                            <div class="pdf-title">${state.type} N° ${num}</div>
-                            <div style="font-size:14px; margin-top:5px; font-weight:bold; color:${color}">Objet : ${obj}</div>
-                        </div>
-                        <div style="text-align:right; font-size:13px">
-                            Date : ${date}<br>
-                            ${state.type==='FACTURE'?'Échéance':'Validité'} : ${dateFin}
-                        </div>
-                    </div>
-
-                    <table class="pdf-table">
-                        <thead><tr><th style="width:50%">DÉSIGNATION</th><th style="text-align:center">QTÉ</th><th style="text-align:right">P.U. HT</th><th style="text-align:right">TOTAL HT</th></tr></thead>
-                        <tbody>${rowsHTML}</tbody>
-                    </table>
-
-                    <div class="pdf-totals">
-                        <table>
-                            <tr><td>Total HT :</td><td>${totalHT.toFixed(2)} €</td></tr>
-                            ${tvaOn ? `<tr><td>TVA (20%) :</td><td>${mtTVA.toFixed(2)} €</td></tr>` : ''}
-                            <tr><td class="pdf-total-final">NET À PAYER :</td><td class="pdf-total-final">${ttc.toFixed(2)} €</td></tr>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="pdf-footer">
-                    <div style="display:flex; justify-content:space-between">
-                        <div style="width:60%">
-                            <strong>Règlement :</strong> ${payment}<br>
-                            Pas d'escompte pour paiement anticipé. Retard : taux légal + 40€ indemnité.
-                            <div class="pdf-bank">IBAN : ${USER.iban}</div>
-                        </div>
-                        <div style="width:30%; text-align:right">
-                            ${state.type==='DEVIS' ? '<div style="border:1px solid #ccc; height:80px; padding:5px">Bon pour accord<br>(Date & Signature)</div>' : ''}
-                        </div>
-                    </div>
-                    <div style="text-align:center; margin-top:20px; color:#999">
-                        ${USER.name} - ${state.type} ${num} ${!tvaOn ? '- TVA non applicable, art. 293 B du CGI.' : ''}
-                    </div>
-                </div>
-            </div>`;
-
-            document.getElementById('paper').innerHTML = html;
-        }
-
-        // TELECHARGEMENT
-        function downloadPDF() {
-            const el = document.getElementById('paper');
-            // Reset du scale pour l'impression propre
-            el.style.transform = 'scale(1)';
-            
-            const num = document.getElementById('inp-num').value || 'doc';
-            const opt = {
-                margin: 0,
-                filename: `${state.type}_${num}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            html2pdf().set(opt).from(el).save().then(() => {
-                // Remettre le zoom visuel
-                el.style.transform = 'scale(0.85)';
-            });
-        }
-    </script>
-</body>
-
 </html>
