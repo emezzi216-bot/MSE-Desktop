@@ -13,7 +13,7 @@
         #dashboard { display: flex; height: 100vh; width: 100vw; }
         
         /* SIDEBAR */
-        .sidebar { width: 450px; background: var(--bg-panel); border-right: 1px solid #333; display: flex; flex-direction: column; height: 100%; z-index: 2; }
+        .sidebar { width: 450px; background: var(--bg-panel); border-right: 1px solid #333; display: flex; flex-direction: column; height: 100%; z-index: 10; position: relative; }
         .sidebar-header { padding: 20px; border-bottom: 1px solid #333; text-align: center; }
         .sidebar-logo { width: 100px; max-height: 100px; object-fit: contain; mix-blend-mode: screen; display: block; margin: 0 auto; }
         .btn-change-logo { color: #888; font-size: 11px; margin-top: 10px; cursor: pointer; text-decoration: underline; }
@@ -50,7 +50,7 @@
             box-shadow: 0 0 30px rgba(0,0,0,0.5); 
             color: black; 
             font-family: Arial, sans-serif;
-            /* Le zoom est géré ici */
+            /* Le zoom est géré ici pour l'affichage écran */
             transform: scale(0.75); 
             transform-origin: top center; 
             margin-bottom: 50px;
@@ -81,8 +81,8 @@
         
         <div class="sidebar">
             <div class="sidebar-header">
-                <img src="logo.png.png" class="sidebar-logo" id="sidebar-logo-img" onerror="this.style.display='none'">
-                <div class="btn-change-logo" onclick="document.getElementById('logo-uploader').click()">CHANGER LOGO</div>
+                <img src="logo.png.png" class="sidebar-logo" id="sidebar-logo-img" alt="LOGO ICI" onerror="this.style.display='none'">
+                <div class="btn-change-logo" onclick="document.getElementById('logo-uploader').click()">CLIQUEZ ICI POUR CHANGER LE LOGO</div>
             </div>
             
             <div class="controls">
@@ -133,7 +133,6 @@
     <script>
         const USER = { name: "Sabri BENNACEUR EI", address: "2 Résidence des Rosiers, 92800 Puteaux, FR", email: "serruremse@gmail.com", siret: "943032755", iban: "FR76 1695 8000 0159 6810 0824 765", rc: "RC décennale TETRIS police n° SV75018041T37384" };
         
-        // On charge par défaut logo.png.png comme vu sur votre capture
         let state = { type: 'FACTURE', logo: 'logo.png.png', items: [{desc: '', qty: 1, price: 0}] };
 
         document.getElementById('inp-date').valueAsDate = new Date();
@@ -213,30 +212,37 @@
             </div>`;
         }
 
-        // --- MOTEUR PDF DIRECT (SANS COPIE CACHÉE) ---
         function downloadPDF() {
+            // 1. CLONER LA FACTURE EXACTE
             const element = document.getElementById('paper');
-            
-            // 1. On sauvegarde le zoom actuel (pour l'affichage)
-            const oldTransform = element.style.transform;
-            
-            // 2. On enlève le zoom pour que le PDF soit généré en taille réelle (A4)
-            // Cela permet au logiciel de voir la "vraie" page et non une page réduite
-            element.style.transform = 'none'; 
-            element.style.margin = '0 auto';
+            const clone = element.cloneNode(true);
 
+            // 2. CONFIGURER LE CLONE POUR QU'IL SOIT PARFAIT
+            // On enlève le zoom pour le remettre à taille réelle
+            clone.style.transform = "none";
+            // On le positionne par dessus tout le reste (z-index élevé)
+            clone.style.position = "fixed";
+            clone.style.top = "0";
+            clone.style.left = "0";
+            clone.style.zIndex = "99999"; 
+            clone.style.margin = "0";
+            clone.style.boxShadow = "none";
+            
+            // 3. L'AJOUTER A LA PAGE (VISIBLE)
+            document.body.appendChild(clone);
+
+            // 4. GENERER LE PDF
             const opt = {
                 margin: 0,
                 filename: `${state.type}_${document.getElementById('inp-num').value || 'doc'}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 794, height: 1123 },
                 jsPDF: { unit: 'px', format: [794, 1123], orientation: 'portrait' }
             };
 
-            // 3. On génère le PDF
-            html2pdf().set(opt).from(element).save().then(() => {
-                // 4. Une fois fini, on remet le zoom pour que ce soit joli à l'écran
-                element.style.transform = oldTransform;
+            html2pdf().set(opt).from(clone).save().then(() => {
+                // 5. SUPPRIMER LE CLONE UNE FOIS FINI
+                document.body.removeChild(clone);
             });
         }
     </script>
