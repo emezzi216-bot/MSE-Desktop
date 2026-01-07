@@ -13,14 +13,14 @@
         #dashboard { display: flex; height: 100vh; width: 100vw; }
         
         /* SIDEBAR */
-        .sidebar { width: 450px; background: var(--bg-panel); border-right: 1px solid #333; display: flex; flex-direction: column; height: 100%; }
+        .sidebar { width: 450px; background: var(--bg-panel); border-right: 1px solid #333; display: flex; flex-direction: column; height: 100%; z-index: 2; }
         .sidebar-header { padding: 20px; border-bottom: 1px solid #333; text-align: center; }
         .sidebar-logo { width: 100px; max-height: 100px; object-fit: contain; mix-blend-mode: screen; display: block; margin: 0 auto; }
         .btn-change-logo { color: #888; font-size: 11px; margin-top: 10px; cursor: pointer; text-decoration: underline; }
         .controls { flex: 1; overflow-y: auto; padding: 20px; }
         
-        /* PREVIEW */
-        .preview-area { flex: 1; background: #333; display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 40px; }
+        /* PREVIEW AREA */
+        .preview-area { flex: 1; background: #333; display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; padding: 40px; position: relative; z-index: 1; }
         
         /* FORMULAIRE */
         .group { margin-bottom: 15px; }
@@ -41,11 +41,19 @@
         .btn-download { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; font-size: 16px; font-weight: bold; text-transform: uppercase; cursor: pointer; border-radius: 5px; }
         .btn-download:hover { background: #2ecc71; }
 
-        /* PAPIER A4 */
+        /* PAPIER A4 - CONFIGURATION STRICTE */
         #paper { 
-            background: white; width: 794px; height: 1123px; padding: 0; 
-            box-shadow: 0 0 30px rgba(0,0,0,0.5); color: black; font-family: Arial, sans-serif;
-            transform: scale(0.75); transform-origin: top center; overflow: hidden; 
+            background: white; 
+            width: 794px; 
+            height: 1123px; 
+            padding: 0; 
+            box-shadow: 0 0 30px rgba(0,0,0,0.5); 
+            color: black; 
+            font-family: Arial, sans-serif;
+            /* Le zoom est géré ici */
+            transform: scale(0.75); 
+            transform-origin: top center; 
+            margin-bottom: 50px;
         }
 
         /* PDF INTERNE */
@@ -73,8 +81,8 @@
         
         <div class="sidebar">
             <div class="sidebar-header">
-                <img src="logo.png.png" class="sidebar-logo" id="sidebar-logo-img" alt="LOGO ICI" onerror="this.style.display='none'">
-                <div class="btn-change-logo" onclick="document.getElementById('logo-uploader').click()">CLIQUEZ ICI POUR CHANGER LE LOGO</div>
+                <img src="logo.png.png" class="sidebar-logo" id="sidebar-logo-img" onerror="this.style.display='none'">
+                <div class="btn-change-logo" onclick="document.getElementById('logo-uploader').click()">CHANGER LOGO</div>
             </div>
             
             <div class="controls">
@@ -125,14 +133,12 @@
     <script>
         const USER = { name: "Sabri BENNACEUR EI", address: "2 Résidence des Rosiers, 92800 Puteaux, FR", email: "serruremse@gmail.com", siret: "943032755", iban: "FR76 1695 8000 0159 6810 0824 765", rc: "RC décennale TETRIS police n° SV75018041T37384" };
         
-        // ICI : ON FORCE LE CODE A CHERCHER LE FICHIER MAL NOMMÉ
+        // On charge par défaut logo.png.png comme vu sur votre capture
         let state = { type: 'FACTURE', logo: 'logo.png.png', items: [{desc: '', qty: 1, price: 0}] };
 
-        // Dates par défaut
         document.getElementById('inp-date').valueAsDate = new Date();
         const d = new Date(); d.setDate(d.getDate()+30); document.getElementById('inp-date-fin').valueAsDate = d;
 
-        // Lancement initial
         renderItems(); render();
 
         function setType(t) { 
@@ -207,29 +213,30 @@
             </div>`;
         }
 
+        // --- MOTEUR PDF DIRECT (SANS COPIE CACHÉE) ---
         function downloadPDF() {
-            const original = document.getElementById('paper');
-            const clone = original.cloneNode(true);
-            clone.style.transform = 'none';
-            clone.style.boxShadow = 'none';
-            clone.style.margin = '0';
-            clone.style.width = '794px';
-            clone.style.height = '1123px';
-            clone.style.maxHeight = '1123px';
-            clone.style.overflow = 'hidden';
-            clone.style.position = 'fixed'; clone.style.left = '-10000px'; clone.style.top = '0';
-            document.body.appendChild(clone);
+            const element = document.getElementById('paper');
+            
+            // 1. On sauvegarde le zoom actuel (pour l'affichage)
+            const oldTransform = element.style.transform;
+            
+            // 2. On enlève le zoom pour que le PDF soit généré en taille réelle (A4)
+            // Cela permet au logiciel de voir la "vraie" page et non une page réduite
+            element.style.transform = 'none'; 
+            element.style.margin = '0 auto';
 
             const opt = {
                 margin: 0,
                 filename: `${state.type}_${document.getElementById('inp-num').value || 'doc'}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 794, height: 1123 },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
                 jsPDF: { unit: 'px', format: [794, 1123], orientation: 'portrait' }
             };
 
-            html2pdf().set(opt).from(clone).save().then(() => {
-                document.body.removeChild(clone);
+            // 3. On génère le PDF
+            html2pdf().set(opt).from(element).save().then(() => {
+                // 4. Une fois fini, on remet le zoom pour que ce soit joli à l'écran
+                element.style.transform = oldTransform;
             });
         }
     </script>
